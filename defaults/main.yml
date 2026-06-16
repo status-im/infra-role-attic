@@ -1,0 +1,60 @@
+---
+# Public FQDN
+attic_domain: 'cache.example.org'
+
+attic_service_name: 'attic'
+attic_service_path: '/docker/{{ attic_service_name }}'
+attic_service_compose: '{{ attic_service_path }}/docker-compose.yml'
+attic_config_path: '{{ attic_service_path }}/atticd.toml'
+
+# atticd
+# Verified against GHCR on 2026-06-16:  latest main branch.
+# To verify/bump:
+# docker buildx imagetools inspect ghcr.io/zhaofengli/attic:main
+attic_cont_name: '{{ attic_service_name }}-server'
+attic_cont_digest: 'sha256:18574aba70fc89d2b695273fbe2e7b2f8ad7e8e786b4cc535124fbe14bada1d0'
+attic_cont_image: 'ghcr.io/zhaofengli/attic@{{ attic_cont_digest }}'
+attic_cont_port: 8080
+
+# Secret
+attic_token_hs256_secret_base64: ~
+
+# DB
+attic_db_cont_name: '{{ attic_service_name }}-db'
+attic_db_cont_image: 'postgres:16-alpine'
+attic_db_cont_port: 5432
+attic_db_cont_vol: '{{ attic_service_path }}/db'
+attic_db_name: 'attic'
+attic_db_user: 'attic'
+attic_db_pass: 'changeMeIfYouCare'
+attic_db_cont_uid: 70
+attic_db_host_uid: '{{ 100000 + attic_db_cont_uid | int }}'
+
+# Storage
+attic_s3_region:     ~
+attic_s3_bucket:     ~
+attic_s3_endpoint:   ~
+attic_s3_access_key: ~
+attic_s3_secret_key: ~
+
+# Chunking / dedup
+attic_chunking_nar_size_threshold: 65536  # 64 KiB
+attic_chunking_min_size: 16384            # 16 KiB
+attic_chunking_avg_size: 65536            # 64 KiB
+attic_chunking_max_size: 262144           # 256 KiB
+
+# Garbage collection
+attic_gc_interval: '12 hours'
+attic_gc_default_retention_period: '3 months'
+
+# Backups
+attic_db_backup_service_name: 'dump-attic-db'
+attic_db_backup_path: '{{ attic_db_cont_vol }}/backup'
+attic_db_backup_frequency: daily
+attic_db_backup_timeout: 120
+attic_db_backup_user: root
+
+# Container management
+compose_recreate: 'auto'
+compose_state: 'present'
+compose_pull: 'always'

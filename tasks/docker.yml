@@ -1,0 +1,53 @@
+---
+- name: Attic | Verify token secret is set
+  assert:
+    that: attic_token_hs256_secret_base64 not in [None, '']
+    fail_msg: 'attic_token_hs256_secret_base64 must be set'
+
+- name: Attic | Create service directory
+  file:
+    path: '{{ attic_service_path }}'
+    state: directory
+    owner: 'dockremap'
+    group: 'docker'
+    mode: 0750
+
+- name: Attic | Create directory for DB data
+  file:
+    path: '{{ attic_db_cont_vol }}/data'
+    state: directory
+    owner: '{{ attic_db_host_uid }}'
+    group: dockremap
+    recurse: true
+
+- name: Attic | Create directory for DB backups
+  file:
+    path: '{{ attic_db_backup_path }}'
+    state: directory
+    owner: '{{ attic_db_host_uid }}'
+    group: dockremap
+    recurse: true
+
+- name: Attic | Create atticd config file
+  template:
+    src: 'atticd.toml.j2'
+    dest: '{{ attic_config_path }}'
+    owner: 'dockremap'
+    group: 'docker'
+    mode: 0640
+  notify: Restart attic
+
+- name: Attic | Create compose file
+  template:
+    src: 'docker-compose.yml.j2'
+    dest: '{{ attic_service_compose }}'
+    owner: 'dockremap'
+    group: 'docker'
+    mode: 0640
+
+- name: Attic | Create containers
+  community.docker.docker_compose_v2:
+    project_src: '{{ attic_service_path }}'
+    recreate:    '{{ compose_recreate }}'
+    pull:        '{{ compose_pull }}'
+    state:       '{{ compose_state }}'

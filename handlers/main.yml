@@ -1,0 +1,9 @@
+---
+- name: Restart nginx
+  service: name=nginx state=restarted
+
+- name: Restart attic
+  community.docker.docker_compose_v2:
+    project_src: '{{ attic_service_path }}'
+    recreate: 'always'
+    state: 'present'

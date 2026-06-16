@@ -1,0 +1,32 @@
+---
+- name: Attic | Configure nginx proxy
+  include_role: name=infra-role-nginx
+  vars:
+    nginx_sites:
+      attic_http:
+        - listen 80
+        - server_name {{ attic_domain }}
+        - return 301 https://{{ attic_domain }}$request_uri
+
+      attic_ssl:
+        - listen 443 ssl
+        - server_name {{ attic_domain }}
+
+        # this host is intentionally NOT behind Cloudflare's proxy to avoid the
+        # request-body cap on large NAR pushes
+        - ssl_certificate     /etc/letsencrypt/live/{{ attic_domain }}/fullchain.pem
+        - ssl_certificate_key /etc/letsencrypt/live/{{ attic_domain }}/privkey.pem
+
+        # NAR uploads can be large; disable body limit and request buffering.
+        - client_max_body_size 0
+        - proxy_request_buffering off
+
+        - location / {
+            proxy_pass http://localhost:{{ attic_cont_port }};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_http_version 1.1;
+            proxy_redirect off;
+          }

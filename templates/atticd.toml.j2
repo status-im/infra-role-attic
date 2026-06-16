@@ -1,0 +1,30 @@
+# Managed by Ansible (infra-role-attic) do not edit by hand.
+
+# atticd listens on all interfaces inside the container.
+listen = "[::]:{{ attic_cont_port }}"
+
+[database]
+url = "postgresql://{{ attic_db_user }}:{{ attic_db_pass }}@{{ attic_db_cont_name }}:{{ attic_db_cont_port }}/{{ attic_db_name }}"
+
+[storage]
+type = "s3"
+region = "{{ attic_s3_region }}"
+bucket = "{{ attic_s3_bucket }}"
+endpoint = "{{ attic_s3_endpoint }}"
+
+[storage.credentials]
+access_key_id = "{{ attic_s3_access_key }}"
+secret_access_key = "{{ attic_s3_secret_key }}"
+
+[jwt.signing]
+token-hs256-secret-base64 = "{{ attic_token_hs256_secret_base64 }}"
+
+[chunking]
+nar-size-threshold = {{ attic_chunking_nar_size_threshold }}
+min-size = {{ attic_chunking_min_size }}
+avg-size = {{ attic_chunking_avg_size }}
+max-size = {{ attic_chunking_max_size }}
+
+[garbage-collection]
+interval = "{{ attic_gc_interval }}"
+default-retention-period = "{{ attic_gc_default_retention_period }}"

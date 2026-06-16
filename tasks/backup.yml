@@ -1,0 +1,23 @@
+---
+- name: 'Create timer for PostgreSQL backup: {{ attic_db_backup_service_name }}'
+  include_role: name=infra-role-systemd-timer
+  vars:
+    systemd_timer_name: '{{ attic_db_backup_service_name }}'
+    systemd_timer_description: 'Dump Attic PostgreSQL database.'
+    systemd_timer_user: '{{ attic_db_backup_user }}'
+    systemd_timer_frequency: '{{ attic_db_backup_frequency }}'
+    systemd_timer_timeout_sec: '{{ attic_db_backup_timeout }}'
+    systemd_timer_after_extra: 'docker.service'
+    systemd_timer_start_on_creation: false
+    systemd_timer_script_content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      BKP_DIR="{{ attic_db_backup_path }}/{{ attic_db_name }}"
+      rm -vfr "${BKP_DIR}"
+      /usr/bin/docker exec -i {{ attic_db_cont_name }} \
+        pg_dump \
+          -F directory \
+          -f "/backup/{{ attic_db_name }}" \
+          -p {{ attic_db_cont_port }} \
+          -U {{ attic_db_user }} {{ attic_db_name }}
+      chmod 750 -R "${BKP_DIR}"

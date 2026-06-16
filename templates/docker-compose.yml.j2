@@ -1,0 +1,39 @@
+---
+services:
+  server:
+    container_name: '{{ attic_cont_name }}'
+    image: '{{ attic_cont_image }}'
+    restart: always
+    command: ['-f', '/etc/atticd.toml']
+    ports:
+      - '127.0.0.1:{{ attic_cont_port }}:{{ attic_cont_port }}'
+    volumes:
+      - '{{ attic_config_path }}:/etc/atticd.toml:ro'
+    depends_on:
+      - 'db'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:{{ attic_cont_port }}/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  db:
+    container_name: '{{ attic_db_cont_name }}'
+    image: '{{ attic_db_cont_image }}'
+    restart: always
+    environment:
+      POSTGRES_DB:       '{{ attic_db_name }}'
+      POSTGRES_USER:     '{{ attic_db_user }}'
+      POSTGRES_PASSWORD: '{{ attic_db_pass }}'
+      PGDATA: '/var/lib/postgresql/data/pgdata'
+    command: |
+      -p {{ attic_db_cont_port }}
+    tmpfs:
+      - '/run/postgresql:size=512K'
+    volumes:
+      - '{{ attic_db_cont_vol }}/data:/var/lib/postgresql/data'
+      - '{{ attic_db_backup_path }}:/backup'
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "{{ attic_db_user }}"]
+      interval: 30s
+      retries: 5

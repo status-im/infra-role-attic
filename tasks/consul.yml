@@ -1,0 +1,14 @@
+---
+- name: Attic | Create Consul service definition
+  include_role: name=infra-role-consul-service
+  vars:
+    consul_config_name: '{{ attic_service_name }}'
+    consul_services:
+      - name: '{{ attic_service_name }}'
+        tags: ['nix', 'cache', 'ci', 'misc']
+        port: '{{ attic_cont_port }}'
+        checks:
+          - id: '{{ attic_service_name }}-status'
+            name: Attic Healthcheck
+            type: http
+            http: 'http://localhost:{{ attic_cont_port }}/'

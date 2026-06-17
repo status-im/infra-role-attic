@@ -1,0 +1,30 @@
+---
+- name: Attic | Ensure tokens directory
+  file:
+    path: '{{ attic_tokens_dir }}'
+    state: directory
+    owner: root
+    group: docker
+    mode: '0700'
+
+- name: Attic | Mint CI cache token (push + pull on ci)
+  shell: |
+    set -euo pipefail
+    token=$(docker exec {{ attic_cont_name }} atticadm -f /etc/atticd.toml make-token \
+      --sub attic-ci --validity '{{ attic_token_validity }}' --push ci --pull ci)
+    printf '%s' "$token" | install -m 0400 /dev/stdin '{{ attic_tokens_dir }}/ci.jwt'
+  args:
+    creates: "{{ omit if attic_token_rotate else attic_tokens_dir ~ '/ci.jwt' }}"
+    executable: /bin/bash
+  no_log: true
+
+- name: Attic | Mint public cache token (push on public)
+  shell: |
+    set -euo pipefail
+    token=$(docker exec {{ attic_cont_name }} atticadm -f /etc/atticd.toml make-token \
+      --sub attic-public --validity '{{ attic_token_validity }}' --push public)
+    printf '%s' "$token" | install -m 0400 /dev/stdin '{{ attic_tokens_dir }}/public.jwt'
+  args:
+    creates: "{{ omit if attic_token_rotate else attic_tokens_dir ~ '/public.jwt' }}"
+    executable: /bin/bash
+  no_log: true

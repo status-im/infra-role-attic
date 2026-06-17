@@ -10,7 +10,7 @@
     state: directory
     owner: 'dockremap'
     group: 'docker'
-    mode: 0750
+    mode: '0750'
 
 - name: Attic | Create directory for DB data
   file:
@@ -34,7 +34,7 @@
     dest: '{{ attic_config_path }}'
     owner: 'dockremap'
     group: 'docker'
-    mode: 0640
+    mode: '0640'
   notify: Restart attic
 
 - name: Attic | Create compose file
@@ -43,7 +43,7 @@
     dest: '{{ attic_service_compose }}'
     owner: 'dockremap'
     group: 'docker'
-    mode: 0640
+    mode: '0640'
 
 - name: Attic | Create containers
   community.docker.docker_compose_v2:

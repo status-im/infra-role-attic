@@ -10,9 +10,10 @@ services:
     volumes:
       - '{{ attic_config_path }}:/etc/atticd.toml:ro'
     depends_on:
-      - 'db'
+      db:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:{{ attic_cont_port }}/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:{{ attic_cont_port }}/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

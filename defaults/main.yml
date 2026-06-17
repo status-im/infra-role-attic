@@ -47,6 +47,20 @@ attic_chunking_max_size: 262144           # 256 KiB
 attic_gc_interval: '12 hours'
 attic_gc_default_retention_period: '3 months'
 
+# Cache provisioning
+attic_api_url: 'http://127.0.0.1:{{ attic_cont_port }}'
+attic_cache_store_dir: '/nix/store'
+attic_cache_priority: 41
+attic_cache_upstream_key_names: ['cache.nixos.org-1']
+attic_caches:
+  - { name: 'ci',     public: false }  # CI-only, private, NOT in flake.nix
+  - { name: 'public', public: true }   # master builds, anonymous pull, flake.nix
+
+# set attic_token_rotate=true to re-mint
+attic_tokens_dir: '{{ attic_service_path }}/tokens'
+attic_token_validity: '10 years'
+attic_token_rotate: false
+
 # Backups
 attic_db_backup_service_name: 'dump-attic-db'
 attic_db_backup_path: '{{ attic_db_cont_vol }}/backup'

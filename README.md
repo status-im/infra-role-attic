@@ -8,43 +8,27 @@ Cache contents are stored in DO Spaces;
 
 - Templates `atticd.toml` and a `docker-compose.yml` under `/docker/attic`.
 - Runs `atticd` and `postgres`.
+- Creates the configured caches (`ci` private, `public` public)
+- Mints the per-cache consumer tokens and persists them to `0400` files under
+  `/docker/attic/tokens/`.
 - Configures nginx as a TLS-terminating reverse proxy.
 - Registers a Consul service and healthcheck.
 - Schedules a daily `pg_dump` (picked up by `infra-role-restic-backups` in infra-ci).
 
+
 ## Tokens
 
-After the server is up, mint tokens and create the two caches. `atticadm`
-runs inside the container and reads the same config/secret.
+To read a token for distribution:
 
 ```sh
-# Admin token with full permissions:
-docker exec attic-server atticadm make-token \
-  --sub admin --validity '1y' \
-  --pull '*' --push '*' --create-cache '*' \
-  --configure-cache '*' --configure-cache-retention '*'
-
-# Log the attic client in against the deployment:
-attic login logos https://cache.nix.logos.co <admin-token>
-
-# Public cache:  safe to add to flake.nix.
-attic cache create logos:public
-attic cache configure logos:public --public
-
-# CI cache: private, push from CI only.
-attic cache create logos:ci
+sudo cat /docker/attic/tokens/ci.jwt
 ```
 
-Then mint the per-use tokens stored as GitHub Actions secrets:
+The `public` cache's signing public key (for `flake.nix` substituters) can be
+fetched anonymously:
 
 ```sh
-# CI: push + pull on the `ci` cache only.
-docker exec attic-server atticadm make-token \
-  --sub ci --validity '1y' --push 'ci' --pull 'ci'
-
-# Public: push on `public` (used by master-branch builds only).
-docker exec attic-server atticadm make-token \
-  --sub public --validity '1y' --push 'public'
+curl -s https://cache.nix.logos.co/_api/v1/cache-config/public | jq -r .public_key
 ```
 
 ## CI usage in GH Actions 

@@ -30,6 +30,10 @@ attic_db_pass: 'changeMeIfYouCare'
 attic_db_cont_uid: 70
 attic_db_host_uid: '{{ 100000 + attic_db_cont_uid | int }}'
 
+attic_pg_exporter_cont_name: '{{ attic_service_name }}-pg-exporter'
+attic_pg_exporter_image: 'quay.io/prometheuscommunity/postgres-exporter:v0.16.0'
+attic_pg_exporter_port: 9187
+
 # Storage
 attic_s3_region:     ~
 attic_s3_bucket:     ~

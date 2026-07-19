@@ -38,3 +38,17 @@ services:
       test: ["CMD", "pg_isready", "-U", "{{ attic_db_user }}"]
       interval: 30s
       retries: 5
+
+  metrics-exporter:
+    container_name: '{{ attic_pg_exporter_cont_name }}'
+    image: '{{ attic_pg_exporter_image }}'
+    restart: always
+    environment:
+      DATA_SOURCE_URI:  '{{ attic_db_cont_name }}:{{ attic_db_cont_port }}/{{ attic_db_name }}?sslmode=disable'
+      DATA_SOURCE_USER: '{{ attic_db_user }}'
+      DATA_SOURCE_PASS: '{{ attic_db_pass }}'
+    ports:
+      - '{{ attic_pg_exporter_port }}:{{ attic_pg_exporter_port }}'
+    depends_on:
+      db:
+        condition: service_healthy

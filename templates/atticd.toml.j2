@@ -4,7 +4,7 @@
 listen = "[::]:{{ attic_cont_port }}"
 
 [database]
-url = "postgresql://{{ attic_db_user }}:{{ attic_db_pass }}@{{ attic_db_cont_name }}:{{ attic_db_cont_port }}/{{ attic_db_name }}"
+url = "postgresql://{{ attic_db_user }}:{{ attic_db_pass }}@{{ attic_db_host }}:{{ attic_db_port }}/{{ attic_db_name }}"
 
 [storage]
 type = "s3"

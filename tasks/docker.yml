@@ -10,32 +10,30 @@
     state: directory
     owner: 'dockremap'
     group: 'docker'
+    mode: '0775'
+
+- name: Attic | Create atticd config directory
+  file:
+    path: '{{ attic_config_dir }}'
+    state: directory
+    owner: 'dockremap'
+    group: 'docker'
     mode: '0750'
 
-- name: Attic | Create directory for DB data
-  file:
-    path: '{{ attic_db_cont_vol }}/data'
-    state: directory
-    owner: '{{ attic_db_host_uid }}'
-    group: dockremap
-    recurse: true
-
-- name: Attic | Create directory for DB backups
-  file:
-    path: '{{ attic_db_backup_path }}'
-    state: directory
-    owner: '{{ attic_db_host_uid }}'
-    group: dockremap
-    recurse: true
+- name: Attic | Ensure shared Docker network exists and DB is attached
+  community.docker.docker_network:
+    name: '{{ attic_network_name }}'
+    state: present
+    connected: ['{{ attic_db_host }}']
+    appends: true
 
 - name: Attic | Create atticd config file
   template:
     src: 'atticd.toml.j2'
-    dest: '{{ attic_config_path }}'
+    dest: '{{ attic_config_file }}'
     owner: 'dockremap'
     group: 'docker'
     mode: '0640'
-  notify: Restart attic
 
 - name: Attic | Create compose file
   template:

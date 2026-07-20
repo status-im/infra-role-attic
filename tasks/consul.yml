@@ -12,15 +12,3 @@
             name: Attic Healthcheck
             type: http
             http: 'http://localhost:{{ attic_cont_port }}/'
-      - name: 'postgres-metrics'
-        id:   '{{ attic_pg_exporter_cont_name }}'
-        tags: ['postgres-metrics']
-        port: '{{ attic_pg_exporter_port }}'
-        address: '{{ ansible_local.wireguard.vpn_ip }}'
-        checks:
-          - id: '{{ attic_pg_exporter_cont_name }}-status'
-            name: Attic Postgres Metrics Exporter
-            type: tcp
-            tcp: 'localhost:{{ attic_pg_exporter_port }}'
-            failures_before_warning: 5
-            failures_before_critical: 10

@@ -4,51 +4,19 @@ services:
     container_name: '{{ attic_cont_name }}'
     image: '{{ attic_cont_image }}'
     restart: always
-    command: ['-f', '/etc/atticd.toml']
+    command: ['-f', '{{ attic_config_cont_file }}']
     ports:
       - '127.0.0.1:{{ attic_cont_port }}:{{ attic_cont_port }}'
     volumes:
-      - '{{ attic_config_path }}:/etc/atticd.toml:ro'
-    depends_on:
-      db:
-        condition: service_healthy
+      - '{{ attic_config_dir }}:{{ attic_config_cont_dir }}:ro'
+    networks:
+      - '{{ attic_network_name }}'
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:{{ attic_cont_port }}/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  db:
-    container_name: '{{ attic_db_cont_name }}'
-    image: '{{ attic_db_cont_image }}'
-    restart: always
-    environment:
-      POSTGRES_DB:       '{{ attic_db_name }}'
-      POSTGRES_USER:     '{{ attic_db_user }}'
-      POSTGRES_PASSWORD: '{{ attic_db_pass }}'
-      PGDATA: '/var/lib/postgresql/data/pgdata'
-    command: |
-      -p {{ attic_db_cont_port }}
-    tmpfs:
-      - '/run/postgresql:size=512K'
-    volumes:
-      - '{{ attic_db_cont_vol }}/data:/var/lib/postgresql/data'
-      - '{{ attic_db_backup_path }}:/backup'
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "{{ attic_db_user }}"]
-      interval: 30s
-      retries: 5
-
-  metrics-exporter:
-    container_name: '{{ attic_pg_exporter_cont_name }}'
-    image: '{{ attic_pg_exporter_image }}'
-    restart: always
-    environment:
-      DATA_SOURCE_URI:  '{{ attic_db_cont_name }}:{{ attic_db_cont_port }}/{{ attic_db_name }}?sslmode=disable'
-      DATA_SOURCE_USER: '{{ attic_db_user }}'
-      DATA_SOURCE_PASS: '{{ attic_db_pass }}'
-    ports:
-      - '{{ attic_pg_exporter_port }}:{{ attic_pg_exporter_port }}'
-    depends_on:
-      db:
-        condition: service_healthy
+networks:
+  {{ attic_network_name }}:
+    external: true

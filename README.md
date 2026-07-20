@@ -1,28 +1,32 @@
 # infra-role-attic
 
 Deploys [Attic](https://docs.attic.rs/), a multi-tenant Nix binary cache, as a
-Docker Compose Setup (`atticd` + PostgreSQL) behind an nginx reverse proxy.
-Cache contents are stored in DO Spaces;
+Docker Compose Setup under `/docker/attic`. Cache contents are stored in DO
+Spaces. PostgreSQL is provided by `infra-role-postgres-ha` and reached over a
+shared Docker network.
 
 ## What it does
 
-- Templates `atticd.toml` and a `docker-compose.yml` under `/docker/attic`.
-- Runs `atticd` and `postgres`.
-- Creates the configured caches (`ci` private, `public` public)
-- Mints the per-cache consumer tokens and persists them to `0400` files under
-  `/docker/attic/tokens/`.
-- Configures nginx as a TLS-terminating reverse proxy.
+- Templates `atticd.toml` into a bind-mounted config directory under
+  `/docker/attic/config` and runs `atticd`.
+- Creates the configured caches (`ci` and `public`, both public) via the atticd
+  HTTP API.
+- Mints a dedicated push token per repo per cache and pushes them to Vault.
 - Registers a Consul service and healthcheck.
-- Schedules a daily `pg_dump` (picked up by `infra-role-restic-backups` in infra-ci).
 
+nginx, PostgreSQL, its metrics exporter, and DB backups are configured outside
+this role (in `infra-ci`, via `infra-role-nginx` and `infra-role-postgres-ha`).
 
 ## Tokens
 
-To read a token for distribution:
+Consumer tokens are stored in Vault (KV v2) at `tokens/<repo>/<cache>`. To read a
+token for distribution:
 
 ```sh
-sudo cat /docker/attic/tokens/ci.jwt
+vault kv get -field=jwt secret/ci/attic/tokens/logos-basecamp/ci
 ```
+
+Set `attic_token_rotate=true` to re-mint and overwrite the tokens in Vault.
 
 The `public` cache's signing public key (for `flake.nix` substituters) can be
 fetched anonymously:
@@ -31,7 +35,7 @@ fetched anonymously:
 curl -s https://cache.nix.logos.co/_api/v1/cache-config/public | jq -r .public_key
 ```
 
-## CI usage in GH Actions 
+## CI usage in GH Actions
 
 ```yaml
 - name: Setup Attic cache

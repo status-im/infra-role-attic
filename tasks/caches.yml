@@ -11,7 +11,7 @@
 
 - name: Attic | Mint short-lived admin token for cache setup
   command: >-
-    docker exec {{ attic_cont_name }} atticadm -f /etc/atticd.toml make-token
+    docker exec {{ attic_cont_name }} atticadm -f {{ attic_config_cont_file }} make-token
     --sub attic-setup --validity '1 hour'
     --create-cache '*' --configure-cache '*' --pull '*'
   register: attic_admin_token
@@ -20,27 +20,27 @@
 
 - name: Attic | Check which caches exist
   uri:
-    url: '{{ attic_api_url }}/_api/v1/cache-config/{{ item.name }}'
+    url: '{{ attic_api_url }}/_api/v1/cache-config/{{ item }}'
     headers:
       Authorization: 'Bearer {{ attic_admin_token.stdout | trim }}'
     status_code: [200, 404]
   register: attic_cache_state
   loop: '{{ attic_caches }}'
   loop_control:
-    label: '{{ item.name }}'
+    label: '{{ item }}'
   no_log: true
 
 - name: Attic | Create missing caches
   uri:
-    url: '{{ attic_api_url }}/_api/v1/cache-config/{{ item.item.name }}'
+    url: '{{ attic_api_url }}/_api/v1/cache-config/{{ item.item }}'
     method: POST
     headers:
       Authorization: 'Bearer {{ attic_admin_token.stdout | trim }}'
     body_format: json
-    body: "{{ {'keypair': 'Generate', 'is_public': item.item.public, 'store_dir': attic_cache_store_dir, 'priority': attic_cache_priority, 'upstream_cache_key_names': attic_cache_upstream_key_names} }}"
+    body: "{{ {'keypair': 'Generate', 'is_public': true, 'store_dir': attic_cache_store_dir, 'priority': attic_cache_priority, 'upstream_cache_key_names': attic_cache_upstream_key_names} }}"
     status_code: [200, 201]
   loop: '{{ attic_cache_state.results }}'
   when: item.status == 404
   loop_control:
-    label: '{{ item.item.name }}'
+    label: '{{ item.item }}'
   no_log: true

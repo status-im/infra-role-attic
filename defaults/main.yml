@@ -1,11 +1,14 @@
 ---
-# Public FQDN
-attic_domain: 'cache.example.org'
-
 attic_service_name: 'attic'
 attic_service_path: '/docker/{{ attic_service_name }}'
 attic_service_compose: '{{ attic_service_path }}/docker-compose.yml'
-attic_config_path: '{{ attic_service_path }}/atticd.toml'
+
+attic_config_dir: '{{ attic_service_path }}/config'
+attic_config_file: '{{ attic_config_dir }}/atticd.toml'
+attic_config_cont_dir: '/etc/atticd'
+attic_config_cont_file: '{{ attic_config_cont_dir }}/atticd.toml'
+
+attic_network_name: 'attic'
 
 # atticd
 # Verified against GHCR on 2026-06-16:  latest main branch.
@@ -19,20 +22,11 @@ attic_cont_port: 8080
 # Secret
 attic_token_hs256_secret_base64: ~
 
-# DB
-attic_db_cont_name: '{{ attic_service_name }}-db'
-attic_db_cont_image: 'postgres:16-alpine'
-attic_db_cont_port: 5432
-attic_db_cont_vol: '{{ attic_service_path }}/db'
+attic_db_host: 'attic-db'
+attic_db_port: 5432
 attic_db_name: 'attic'
 attic_db_user: 'attic'
 attic_db_pass: 'changeMeIfYouCare'
-attic_db_cont_uid: 70
-attic_db_host_uid: '{{ 100000 + attic_db_cont_uid | int }}'
-
-attic_pg_exporter_cont_name: '{{ attic_service_name }}-pg-exporter'
-attic_pg_exporter_image: 'quay.io/prometheuscommunity/postgres-exporter:v0.16.0'
-attic_pg_exporter_port: 9187
 
 # Storage
 attic_s3_region:     ~
@@ -56,21 +50,17 @@ attic_api_url: 'http://127.0.0.1:{{ attic_cont_port }}'
 attic_cache_store_dir: '/nix/store'
 attic_cache_priority: 41
 attic_cache_upstream_key_names: ['cache.nixos.org-1']
-attic_caches:
-  - { name: 'ci',     public: false }  # CI-only, private, NOT in flake.nix
-  - { name: 'public', public: true }   # master builds, anonymous pull, flake.nix
+# attic_caches: ['ci', 'public']
+attic_caches: []
 
-# set attic_token_rotate=true to re-mint
-attic_tokens_dir: '{{ attic_service_path }}/tokens'
+attic_repos: []
 attic_token_validity: '10 years'
+# set attic_token_rotate=true to re-mint and overwrite the tokens in Vault
 attic_token_rotate: false
 
-# Backups
-attic_db_backup_service_name: 'dump-attic-db'
-attic_db_backup_path: '{{ attic_db_cont_vol }}/backup'
-attic_db_backup_frequency: daily
-attic_db_backup_timeout: 120
-attic_db_backup_user: root
+attic_vault_kv_mount: 'secret'
+attic_vault_tokens_path: '{{ env }}/{{ stage }}/tokens'
+attic_vault_cli_chdir: '{{ playbook_dir }}/..'
 
 # Container management
 compose_recreate: 'auto'

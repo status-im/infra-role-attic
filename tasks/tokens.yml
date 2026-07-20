@@ -1,30 +1,44 @@
 ---
-- name: Attic | Ensure tokens directory
-  file:
-    path: '{{ attic_tokens_dir }}'
-    state: directory
-    owner: root
-    group: docker
-    mode: '0700'
 
-- name: Attic | Mint CI cache token (push + pull on ci)
-  shell: |
-    set -euo pipefail
-    token=$(docker exec {{ attic_cont_name }} atticadm -f /etc/atticd.toml make-token \
-      --sub attic-ci --validity '{{ attic_token_validity }}' --push ci --pull ci)
-    printf '%s' "$token" | install -m 0400 /dev/stdin '{{ attic_tokens_dir }}/ci.jwt'
-  args:
-    creates: "{{ omit if attic_token_rotate else attic_tokens_dir ~ '/ci.jwt' }}"
-    executable: /bin/bash
+- name: Attic | Mint per-repo consumer tokens
+  command: >-
+    docker exec {{ attic_cont_name }} atticadm -f {{ attic_config_cont_file }} make-token
+    --sub attic-{{ item.0 }}-{{ item.1 }} --validity '{{ attic_token_validity }}'
+    --push {{ item.1 }}
+  register: attic_minted_tokens
+  changed_when: false
+  loop: "{{ attic_repos | product(attic_caches) | list }}"
+  loop_control:
+    label: '{{ item.0 }}/{{ item.1 }}'
   no_log: true
 
-- name: Attic | Mint public cache token (push on public)
-  shell: |
-    set -euo pipefail
-    token=$(docker exec {{ attic_cont_name }} atticadm -f /etc/atticd.toml make-token \
-      --sub attic-public --validity '{{ attic_token_validity }}' --push public)
-    printf '%s' "$token" | install -m 0400 /dev/stdin '{{ attic_tokens_dir }}/public.jwt'
+- name: Attic | Check which consumer tokens exist in Vault
+  command: >-
+    vault kv get -field=jwt
+    {{ attic_vault_kv_mount }}/{{ attic_vault_tokens_path }}/{{ item.item.0 }}/{{ item.item.1 }}
   args:
-    creates: "{{ omit if attic_token_rotate else attic_tokens_dir ~ '/public.jwt' }}"
-    executable: /bin/bash
+    chdir: '{{ attic_vault_cli_chdir }}'
+  register: attic_token_present
+  changed_when: false
+  failed_when: false
+  delegate_to: localhost
+  become: false
+  loop: '{{ attic_minted_tokens.results }}'
+  loop_control:
+    label: '{{ item.item.0 }}/{{ item.item.1 }}'
+  no_log: true
+
+- name: Attic | Store missing consumer tokens in Vault
+  command: >-
+    vault kv put
+    {{ attic_vault_kv_mount }}/{{ attic_vault_tokens_path }}/{{ item.item.item.0 }}/{{ item.item.item.1 }}
+    jwt={{ item.item.stdout | trim }}
+  args:
+    chdir: '{{ attic_vault_cli_chdir }}'
+  when: attic_token_rotate or item.rc != 0
+  delegate_to: localhost
+  become: false
+  loop: '{{ attic_token_present.results }}'
+  loop_control:
+    label: '{{ item.item.item.0 }}/{{ item.item.item.1 }}'
   no_log: true

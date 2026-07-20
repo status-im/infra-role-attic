@@ -3,5 +3,3 @@
 - import_tasks: caches.yml
 - import_tasks: tokens.yml
 - import_tasks: consul.yml
-- import_tasks: proxy.yml
-- import_tasks: backup.yml

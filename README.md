@@ -19,11 +19,11 @@ this role (in `infra-ci`, via `infra-role-nginx` and `infra-role-postgres-ha`).
 
 ## Tokens
 
-Consumer tokens are stored in Vault (KV v2) at `tokens/<repo>/<cache>`. To read a
-token for distribution:
+Consumer tokens are stored in Vault (KV v2) at `tokens/<org>/<repo>/<cache>`. To
+read a token for distribution:
 
 ```sh
-vault kv get -field=jwt secret/ci/attic/tokens/logos-basecamp/ci
+vault kv get -field=jwt secret/ci/attic/tokens/logos-co/logos-basecamp/ci
 ```
 
 Set `attic_token_rotate=true` to re-mint and overwrite the tokens in Vault.

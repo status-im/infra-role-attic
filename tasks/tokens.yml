@@ -3,19 +3,19 @@
 - name: Attic | Mint per-repo consumer tokens
   command: >-
     docker exec {{ attic_cont_name }} atticadm -f {{ attic_config_cont_file }} make-token
-    --sub attic-{{ item.0 }}-{{ item.1 }} --validity '{{ attic_token_validity }}'
-    --push {{ item.1 }}
+    --sub attic-{{ item.0.org }}-{{ item.0.name }}-{{ item.1 }}
+    --validity '{{ attic_token_validity }}' --push {{ item.1 }}
   register: attic_minted_tokens
   changed_when: false
   loop: "{{ attic_repos | product(attic_caches) | list }}"
   loop_control:
-    label: '{{ item.0 }}/{{ item.1 }}'
+    label: '{{ item.0.org }}/{{ item.0.name }}/{{ item.1 }}'
   no_log: true
 
 - name: Attic | Check which consumer tokens exist in Vault
   command: >-
     vault kv get -field=jwt
-    {{ attic_vault_kv_mount }}/{{ attic_vault_tokens_path }}/{{ item.item.0 }}/{{ item.item.1 }}
+    {{ attic_vault_kv_mount }}/{{ attic_vault_tokens_path }}/{{ item.0.org }}/{{ item.0.name }}/{{ item.1 }}
   args:
     chdir: '{{ attic_vault_cli_chdir }}'
   register: attic_token_present
@@ -23,22 +23,23 @@
   failed_when: false
   delegate_to: localhost
   become: false
-  loop: '{{ attic_minted_tokens.results }}'
+  loop: "{{ attic_repos | product(attic_caches) | list }}"
   loop_control:
-    label: '{{ item.item.0 }}/{{ item.item.1 }}'
+    label: '{{ item.0.org }}/{{ item.0.name }}/{{ item.1 }}'
   no_log: true
 
 - name: Attic | Store missing consumer tokens in Vault
   command: >-
     vault kv put
-    {{ attic_vault_kv_mount }}/{{ attic_vault_tokens_path }}/{{ item.item.item.0 }}/{{ item.item.item.1 }}
-    jwt={{ item.item.stdout | trim }}
+    {{ attic_vault_kv_mount }}/{{ attic_vault_tokens_path }}/{{ item.0.org }}/{{ item.0.name }}/{{ item.1 }}
+    jwt={{ attic_minted_tokens.results[idx].stdout | trim }}
   args:
     chdir: '{{ attic_vault_cli_chdir }}'
-  when: attic_token_rotate or item.rc != 0
+  when: attic_token_rotate or attic_token_present.results[idx].rc != 0
   delegate_to: localhost
   become: false
-  loop: '{{ attic_token_present.results }}'
+  loop: "{{ attic_repos | product(attic_caches) | list }}"
   loop_control:
-    label: '{{ item.item.item.0 }}/{{ item.item.item.1 }}'
+    index_var: idx
+    label: '{{ item.0.org }}/{{ item.0.name }}/{{ item.1 }}'
   no_log: true

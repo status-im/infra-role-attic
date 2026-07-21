@@ -53,6 +53,9 @@ attic_cache_upstream_key_names: ['cache.nixos.org-1']
 # attic_caches: ['ci', 'public']
 attic_caches: []
 
+# {{ attic_vault_tokens_path }}/<org>/<repo>/<cache>, e.g.:
+#   attic_repos:
+#     - { org: 'logos-co', name: 'logos-basecamp' }
 attic_repos: []
 attic_token_validity: '10 years'
 # set attic_token_rotate=true to re-mint and overwrite the tokens in Vault

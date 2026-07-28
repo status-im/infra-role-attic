@@ -65,6 +65,13 @@ attic_vault_kv_mount: 'secret'
 attic_vault_tokens_path: '{{ env }}/{{ stage }}/tokens'
 attic_vault_cli_chdir: '{{ playbook_dir }}/..'
 
+# Github
+attic_github_endpoint: 'https://{{ attic_domain }}'
+attic_github_env: 'public-cache'
+attic_github_secrets:
+  ci:     { name: 'ATTIC_TOKEN_CI' }
+  public: { name: 'ATTIC_TOKEN_PUBLIC', env: true }
+
 # Container management
 compose_recreate: 'auto'
 compose_state: 'present'

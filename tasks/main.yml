@@ -2,4 +2,5 @@
 - import_tasks: docker.yml
 - import_tasks: caches.yml
 - import_tasks: tokens.yml
+- import_tasks: github.yml
 - import_tasks: consul.yml

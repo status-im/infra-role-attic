@@ -1,0 +1,90 @@
+---
+
+# Not all of these repos release from 'master', some use 'main'.
+- name: Attic | GitHub | Look up release branch of each repo
+  command: gh api repos/{{ item.org }}/{{ item.name }} --jq .default_branch
+  register: attic_github_branches
+  changed_when: false
+  delegate_to: localhost
+  become: false
+  ignore_errors: true
+  loop: '{{ attic_repos }}'
+  loop_control:
+    label: '{{ item.org }}/{{ item.name }}'
+
+- name: Attic | GitHub | Set ATTIC_ENDPOINT variable
+  command: >-
+    gh variable set ATTIC_ENDPOINT
+    --repo {{ item.org }}/{{ item.name }} --body '{{ attic_github_endpoint }}'
+  delegate_to: localhost
+  become: false
+  ignore_errors: true
+  loop: '{{ attic_repos }}'
+  loop_control:
+    label: '{{ item.org }}/{{ item.name }}'
+
+- name: Attic | GitHub | Create '{{ attic_github_env }}' environment
+  command: >-
+    gh api --method PUT
+    repos/{{ item.org }}/{{ item.name }}/environments/{{ attic_github_env }} --input -
+  args:
+    stdin: >-
+      {"deployment_branch_policy":
+        {"protected_branches": false, "custom_branch_policies": true}}
+  delegate_to: localhost
+  become: false
+  ignore_errors: true
+  loop: '{{ attic_repos }}'
+  loop_control:
+    label: '{{ item.org }}/{{ item.name }}'
+
+- name: Attic | GitHub | List branch policies of '{{ attic_github_env }}'
+  command: >-
+    gh api
+    repos/{{ item.org }}/{{ item.name }}/environments/{{ attic_github_env }}/deployment-branch-policies
+    --jq '[.branch_policies[].name]'
+  register: attic_github_branch_policies
+  changed_when: false
+  delegate_to: localhost
+  become: false
+  ignore_errors: true
+  loop: '{{ attic_repos }}'
+  loop_control:
+    label: '{{ item.org }}/{{ item.name }}'
+
+# Adding a policy that already exists is an error, hence the check above.
+- name: Attic | GitHub | Restrict '{{ attic_github_env }}' to release branch
+  command: >-
+    gh api --method POST
+    repos/{{ item.org }}/{{ item.name }}/environments/{{ attic_github_env }}/deployment-branch-policies
+    --input -
+  args:
+    stdin: '{{ {"name": branch, "type": "branch"} | to_json }}'
+  vars:
+    branch: '{{ attic_github_branches.results[idx].stdout | trim }}'
+  when: branch not in (attic_github_branch_policies.results[idx].stdout | default('[]', true) | from_json)
+  delegate_to: localhost
+  become: false
+  ignore_errors: true
+  loop: '{{ attic_repos }}'
+  loop_control:
+    index_var: idx
+    label: '{{ item.org }}/{{ item.name }} -> {{ branch }}'
+
+- name: Attic | GitHub | Set cache token secrets
+  command: >-
+    gh secret set {{ secret.name }} --repo {{ item.0.org }}/{{ item.0.name }}
+    {{ ('--env ' ~ attic_github_env) if secret.env | default(false) else '' }}
+  args:
+    # Passed over stdin so the token never lands in the process table.
+    stdin: '{{ attic_tokens[idx] }}'
+    stdin_add_newline: false
+  vars:
+    secret: '{{ attic_github_secrets[item.1] }}'
+  delegate_to: localhost
+  become: false
+  ignore_errors: true
+  loop: '{{ attic_repos | product(attic_caches) | list }}'
+  loop_control:
+    index_var: idx
+  no_log: true

@@ -28,11 +28,25 @@
     label: '{{ item.0.org }}/{{ item.0.name }}/{{ item.1 }}'
   no_log: true
 
+- name: Attic | Resolve current consumer tokens
+  set_fact:
+    attic_tokens: >-
+      {{ attic_tokens | default([]) + [(
+           attic_minted_tokens.results[idx].stdout
+           if (attic_token_rotate or attic_token_present.results[idx].rc != 0)
+           else attic_token_present.results[idx].stdout
+         ) | trim] }}
+  loop: "{{ attic_repos | product(attic_caches) | list }}"
+  loop_control:
+    index_var: idx
+    label: '{{ item.0.org }}/{{ item.0.name }}/{{ item.1 }}'
+  no_log: true
+
 - name: Attic | Store missing consumer tokens in Vault
   command: >-
     vault kv put
     {{ attic_vault_kv_mount }}/{{ attic_vault_tokens_path }}/{{ item.0.org }}/{{ item.0.name }}/{{ item.1 }}
-    jwt={{ attic_minted_tokens.results[idx].stdout | trim }}
+    jwt={{ attic_tokens[idx] }}
   args:
     chdir: '{{ attic_vault_cli_chdir }}'
   when: attic_token_rotate or attic_token_present.results[idx].rc != 0

@@ -1,17 +1,5 @@
 ---
 
-- name: Attic | Mint per-repo consumer tokens
-  command: >-
-    docker exec {{ attic_cont_name }} atticadm -f {{ attic_config_cont_file }} make-token
-    --sub attic-{{ item.0.org }}-{{ item.0.name }}-{{ item.1 }}
-    --validity '{{ attic_token_validity }}' --push {{ item.1 }}
-  register: attic_minted_tokens
-  changed_when: false
-  loop: "{{ attic_repos | product(attic_caches) | list }}"
-  loop_control:
-    label: '{{ item.0.org }}/{{ item.0.name }}/{{ item.1 }}'
-  no_log: true
-
 - name: Attic | Check which consumer tokens exist in Vault
   command: >-
     vault kv get -field=jwt
@@ -25,6 +13,20 @@
   become: false
   loop: "{{ attic_repos | product(attic_caches) | list }}"
   loop_control:
+    label: '{{ item.0.org }}/{{ item.0.name }}/{{ item.1 }}'
+  no_log: true
+
+- name: Attic | Mint missing or rotated per-repo consumer tokens
+  command: >-
+    docker exec {{ attic_cont_name }} atticadm -f {{ attic_config_cont_file }} make-token
+    --sub attic-{{ item.0.org }}-{{ item.0.name }}-{{ item.1 }}
+    --validity '{{ attic_token_validity }}' --push {{ item.1 }}
+  register: attic_minted_tokens
+  changed_when: false
+  when: attic_token_rotate or attic_token_present.results[idx].rc != 0
+  loop: "{{ attic_repos | product(attic_caches) | list }}"
+  loop_control:
+    index_var: idx
     label: '{{ item.0.org }}/{{ item.0.name }}/{{ item.1 }}'
   no_log: true
 
@@ -42,7 +44,7 @@
     label: '{{ item.0.org }}/{{ item.0.name }}/{{ item.1 }}'
   no_log: true
 
-- name: Attic | Store missing consumer tokens in Vault
+- name: Attic | Store new or rotated consumer tokens in Vault
   command: >-
     vault kv put
     {{ attic_vault_kv_mount }}/{{ attic_vault_tokens_path }}/{{ item.0.org }}/{{ item.0.name }}/{{ item.1 }}

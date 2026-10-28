@@ -36,10 +36,10 @@ attic_s3_access_key: ~
 attic_s3_secret_key: ~
 
 # Chunking / dedup
-attic_chunking_nar_size_threshold: 65536  # 64 KiB
-attic_chunking_min_size: 16384            # 16 KiB
-attic_chunking_avg_size: 65536            # 64 KiB
-attic_chunking_max_size: 262144           # 256 KiB
+attic_chunking_nar_size_threshold: 0  # Disable chunking
+attic_chunking_min_size: 16384        # 16 KiB
+attic_chunking_avg_size: 65536        # 64 KiB
+attic_chunking_max_size: 262144       # 256 KiB
 
 # Garbage collection
 attic_gc_interval: '12 hours'
